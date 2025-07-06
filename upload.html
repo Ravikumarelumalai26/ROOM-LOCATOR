@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Upload Room</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .hidden { display: none; }
+    .toast-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .toast-overlay.show {
+      display: flex;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-purple-100 via-pink-200 to-yellow-100 text-gray-800 dark:text-white transition duration-300">
+
+  <!-- ✅ Navigation Bar -->
+ 
+<nav class="px-6 py-4 flex justify-between items-center">
+  <!-- Left: View Rooms -->
+  <a href="view.html" class="text-lg text-gray-800 font-medium relative group">
+    View Rooms
+    <span class="block h-0.5 bg-blue-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></span>
+  </a>
+
+  <!-- Right: Upload Room -->
+  <a href="upload.html" class="text-lg text-gray-800 font-medium relative group">
+    Upload Room
+    <span class="block h-0.5 bg-blue-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></span>
+  </a>
+</nav>
+
+  <!-- ✅ Form Section -->
+  <form id="uploadForm" class="max-w-xl mx-auto mt-4 p-6 bg-white/70 backdrop-blur-lg dark:bg-gray-800/80 rounded-2xl shadow-2xl">
+    <h2 class="text-3xl font-bold mb-6 text-center">Upload Room</h2>
+
+    <div>
+      <label class="block font-semibold mb-1">Area Name</label>
+      <input name="area_name" type="text" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm" required />
+    </div>
+
+    <div>
+      <label>Address</label>
+      <textarea name="address" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 resize-y shadow-sm" required></textarea>
+    </div>
+
+    <div>
+      <label class="block font-semibold mb-1">Contact Number</label>
+      <input name="contact" type="text" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm" required />
+    </div>
+
+    <div>
+      <label class="block font-semibold mb-1">Google Maps URL</label>
+      <input name="map_url" type="url" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm" required />
+    </div>
+
+    <div>
+      <label class="block font-semibold mb-2">Upload Images (Max 5)</label>
+      <div id="drop-area" class="cursor-pointer border-2 border-dashed border-blue-300 rounded-xl p-6 text-center bg-white/50 dark:bg-gray-700/40 hover:bg-blue-50 dark:hover:bg-gray-600/50 transition">
+        <p>📂 Drag & drop images here or click to select</p>
+        <input type="file" id="imageInput" class="hidden" multiple accept="image/*" />
+      </div>
+      <div id="preview" class="flex flex-wrap gap-3 mt-3"></div>
+    </div>
+
+    <button type="submit" class="w-full py-3 bg-blue-600 text-white font-bold rounded-lg shadow hover:bg-blue-700 transition mt-4">Upload</button>
+  </form>
+
+  <!-- Toast Overlay -->
+  <div id="toastOverlay" class="toast-overlay">
+    <div id="toast" class="bg-white dark:bg-gray-800 text-black dark:text-white px-6 py-4 rounded-xl text-xl shadow-xl font-semibold">
+      Toast Message
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const imageInput = document.getElementById('imageInput');
+    const dropArea = document.getElementById('drop-area');
+    const preview = document.getElementById('preview');
+    const toastOverlay = document.getElementById('toastOverlay');
+    const toast = document.getElementById('toast');
+    let selectedFiles = [];
+
+    function showToast(message) {
+      toast.textContent = message;
+      toastOverlay.classList.add('show');
+      setTimeout(() => toastOverlay.classList.remove('show'), 1000);
+    }
+
+    function handleFiles(files) {
+      const fileArray = Array.from(files);
+      if ((selectedFiles.length + fileArray.length) > 5) {
+        showToast("Max 5 images allowed");
+        return;
+      }
+
+      fileArray.forEach(file => {
+        if (!file.type.startsWith("image/")) return;
+
+        selectedFiles.push(file);
+        const reader = new FileReader();
+        reader.onload = () => {
+          const div = document.createElement('div');
+          div.className = 'relative';
+          div.innerHTML = `
+            <img src="${reader.result}" class="h-24 rounded-lg shadow-md border" />
+            <button class="absolute -top-2 -right-2 bg-white text-black rounded-full text-xs px-1">×</button>
+          `;
+          div.querySelector('button').onclick = () => {
+            const index = selectedFiles.indexOf(file);
+            if (index > -1) selectedFiles.splice(index, 1);
+            div.remove();
+          };
+          preview.appendChild(div);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    dropArea.addEventListener('click', () => imageInput.click());
+    imageInput.addEventListener('change', () => handleFiles(imageInput.files));
+    dropArea.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropArea.classList.add('border-blue-500', 'bg-blue-100');
+    });
+    dropArea.addEventListener('dragleave', () => {
+      dropArea.classList.remove('border-blue-500', 'bg-blue-100');
+    });
+    dropArea.addEventListener('drop', e => {
+      e.preventDefault();
+      dropArea.classList.remove('border-blue-500', 'bg-blue-100');
+      handleFiles(e.dataTransfer.files);
+    });
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+
+      if (selectedFiles.length === 0) {
+        showToast("Select at least one image");
+        return;
+      }
+
+      const base64Images = [];
+      for (const img of selectedFiles) {
+        const reader = new FileReader();
+        const base64 = await new Promise(resolve => {
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(img);
+        });
+        base64Images.push(base64);
+      }
+
+      const data = new FormData(form);
+      const payload = {
+        area_name: data.get("area_name"),
+        address: data.get("address"),
+        contact: data.get("contact"),
+        map_url: data.get("map_url"),
+        images: base64Images
+      };
+
+      try {
+        const res = await fetch('/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          showToast("Room uploaded successfully!");
+          form.reset();
+          selectedFiles = [];
+          preview.innerHTML = '';
+        } else {
+          const result = await res.json();
+          showToast(result.message || "Upload failed");
+        }
+      } catch (err) {
+        showToast("Error: " + err.message);
+      }
+    });
+  </script>
+</body>
+</html>

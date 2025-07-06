@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Email OTP Verification</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    let resendCooldown = 30;
+    let resendTimer;
+
+    function showOTPField() {
+      document.getElementById('otp-section').classList.remove('hidden');
+      document.getElementById('send-otp-btn').classList.add('hidden');
+      document.getElementById('verify-otp-btn').classList.remove('hidden');
+      document.getElementById('resend-otp-link').classList.remove('hidden');
+      document.getElementById('email').readOnly = true;
+    }
+
+    function handleSendOTP(e, isResend = false) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      if (!email) return alert('Please enter your email.');
+
+      fetch('/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `email=${encodeURIComponent(email)}`
+      })
+      .then(res => {
+        if (res.ok || res.redirected) {
+          if (!isResend) showOTPField();
+          startResendCooldown();
+          document.getElementById('message').innerHTML = `<p class="text-blue-600">OTP sent to ${email}</p>`;
+        } else {
+          res.text().then(msg => alert(msg));
+        }
+      });
+    }
+
+    function handleVerifyOTP(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const otp = document.getElementById('otp').value;
+      if (!otp) return alert('Enter OTP.');
+
+      fetch('/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`
+      })
+      .then(res => res.text())
+      .then(msg => {
+        if (msg.includes("success") || msg.includes("verified")) {
+          window.location.href = "view.html"; // ✅ Redirect after success
+        } else {
+          document.getElementById('message').innerHTML = `<p class="text-red-600">${msg}</p>`;
+        }
+      });
+    }
+
+    function startResendCooldown() {
+      const resendBtn = document.getElementById('resend-otp-btn');
+      const countdown = document.getElementById('resend-countdown');
+      resendBtn.disabled = true;
+
+      let seconds = resendCooldown;
+      countdown.textContent = `(${seconds}s)`;
+
+      resendTimer = setInterval(() => {
+        seconds--;
+        countdown.textContent = `(${seconds}s)`;
+
+        if (seconds <= 0) {
+          clearInterval(resendTimer);
+          resendBtn.disabled = false;
+          countdown.textContent = '';
+        }
+      }, 1000);
+    }
+  </script>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-cover bg-center bg-no-repeat" 
+  style="background-image: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1500&q=80');">
+
+  <form class="bg-white p-6 rounded shadow-md w-full max-w-sm">
+    <h2 class="text-2xl font-bold mb-6 text-center">Email Verification</h2>
+
+    <!-- Email Input -->
+    <input id="email" name="email" type="email" required
+      placeholder="Enter your email"
+      class="w-full p-2 border rounded mb-4" />
+
+    <!-- OTP Input -->
+    <div id="otp-section" class="hidden">
+      <input id="otp" name="otp" type="text" required
+        placeholder="Enter OTP"
+        class="w-full p-2 border rounded mb-4" />
+    </div>
+
+    <!-- Send OTP Button -->
+    <button id="send-otp-btn"
+      onclick="handleSendOTP(event)"
+      class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition mb-2">
+      Send OTP
+    </button>
+
+    <!-- Verify OTP Button -->
+    <button id="verify-otp-btn"
+      onclick="handleVerifyOTP(event)"
+      class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition mb-2 hidden">
+      Verify OTP
+    </button>
+
+    <!-- Resend OTP -->
+    <div id="resend-otp-link" class="hidden text-center mt-2">
+      <button id="resend-otp-btn"
+        onclick="handleSendOTP(event, true)"
+        class="text-blue-600 hover:underline text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+        🔁 Resend OTP <span id="resend-countdown" class="text-gray-500"></span>
+      </button>
+    </div>
+
+    <!-- Status Message -->
+    <div id="message" class="mt-4 text-center text-sm font-medium"></div>
+  </form>
+</body>
+</html>

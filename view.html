@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Room Listings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-purple-100 via-pink-200 to-yellow-100 text-gray-800 dark:text-white transition duration-300"></body>
+  <!-- ✅ Navigation Bar -->
+  <nav class="px-6 py-4 flex justify-between items-center">
+    <!-- Left: View Rooms -->
+    <a href="view.html" class="text-lg text-gray-800 font-medium relative group">
+      View Rooms
+      <span class="block h-0.5 bg-blue-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></span>
+    </a>
+
+    <!-- Right: Upload Room -->
+    <a href="upload.html" class="text-lg text-gray-800 font-medium relative group">
+      Upload Room
+      <span class="block h-0.5 bg-blue-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></span>
+    </a>
+  </nav>
+
+  <h2 class="text-3xl text-center font-bold text-gray-800 mb-8">Available Rooms</h2>
+  <div id="rooms" class="flex flex-wrap justify-center gap-6"></div>
+
+  <!-- Image Preview Overlay -->
+  <div id="imageOverlay" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 hidden">
+    <span class="absolute top-4 right-6 text-white text-3xl font-bold cursor-pointer" onclick="hidePreview()">×</span>
+    <img id="overlayImg" class="max-w-full max-h-[90vh] rounded-lg" />
+  </div>
+
+  <script>
+    async function loadRooms() {
+      const res = await fetch('/rooms');
+      const data = await res.json();
+      const container = document.getElementById('rooms');
+
+      container.innerHTML = data.map((room, index) => {
+        const imgs = JSON.parse(room.images || '[]');
+        const imageSlides = imgs.map((src, i) => `
+          <img src="${src}" class="carousel-img ${i === 0 ? 'block' : 'hidden'} w-full h-48 object-cover rounded-md cursor-pointer" onclick="showPreview('${src}')">
+        `).join('');
+
+        return `
+          <div class="card bg-white shadow-md rounded-lg p-4 w-80" data-room="${index}">
+            <div class="relative mb-4">
+              <button class="prev absolute top-1/2 left-2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-2 py-1 rounded" onclick="changeSlide(${index}, -1)">❮</button>
+              <div class="carousel-container">${imageSlides}</div>
+              <button class="next absolute top-1/2 right-2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-2 py-1 rounded" onclick="changeSlide(${index}, 1)">❯</button>
+            </div>
+            <div class="text-gray-700">
+              <h3 class="text-lg font-semibold mb-1"><i class="fa-solid fa-location-dot text-purple-500 mr-1"></i> ${room.area_name}</h3>
+              <p class="mb-1"><strong>🏠 Address:</strong> ${room.address}</p>
+              <p class="mb-1"><strong>📞 Contact:</strong> <a href="tel:${room.contact}" class="text-blue-600 font-medium">${room.contact}</a></p>
+              <p class="mt-2"><a href="${room.map_url}" target="_blank" class="text-blue-500 hover:underline font-medium"><i class="fa-solid fa-map-location-dot mr-1"></i>Google Maps</a></p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function changeSlide(roomIndex, direction) {
+      const card = document.querySelector(`.card[data-room="${roomIndex}"]`);
+      const images = card.querySelectorAll('.carousel-img');
+      let current = [...images].findIndex(img => img.classList.contains('block'));
+      images[current].classList.remove('block');
+      images[current].classList.add('hidden');
+      let next = (current + direction + images.length) % images.length;
+      images[next].classList.remove('hidden');
+      images[next].classList.add('block');
+    }
+
+    function showPreview(src) {
+      document.getElementById('overlayImg').src = src;
+      document.getElementById('imageOverlay').classList.remove('hidden');
+    }
+
+    function hidePreview() {
+      document.getElementById('imageOverlay').classList.add('hidden');
+    }
+
+    loadRooms();
+  </script>
+</body>
+</html>
